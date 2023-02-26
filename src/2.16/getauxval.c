@@ -4,57 +4,55 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <elf.h>
+#include <link.h>
+
+#include "common.h"
 
 /** types **/
-struct auxv_entry {
-	unsigned long type;
-	unsigned long value;
-};
+
 typedef unsigned long (*pfn_getauxval)(unsigned long type);
 
 /** globals **/
-static struct auxv_entry *g_auxv = NULL;;
+static ElfW(auxv_t) *g_auxv = NULL;;
 static pfn_getauxval getauxval_fn = NULL;
 
 static unsigned long _getauxval(unsigned long type){
-	struct auxv_entry *a;
-	for(a = g_auxv; a->type != 0 && a->type != type; ++a);
-	return (a->type == 0) ? 0 : a->value;
+	ElfW(auxv_t) *a;
+	for(a = g_auxv; a->a_type != 0 && a->a_type != type; ++a);
+	return (a->a_type == 0) ? 0 : a->a_un.a_val;
 }
 
-
 static int _getauxval_init(){
-	int fd = open("/proc/self/auxv", O_RDONLY);
+	ElfW(auxv_t) pairs[256];
+	
+	int fd = open ("/proc/self/auxv", O_RDONLY);
 	if(fd < 0) return -1;
 
-	struct auxv_entry e = {0,0};
+	ssize_t rlen = read (fd, pairs, sizeof(pairs));
+	close (fd);
+  	if (rlen < 0) return -1;
 
-	int num_auxv;
-	// look for the end (always include AT_NULL)
-	for(num_auxv = 1;
-		read(fd, &e, sizeof(e)) == sizeof(e)
-		&& e.type != 0
-		&& e.value != 0;
-		++num_auxv
-	);
+	size_t n = (size_t)rlen / sizeof(pairs[0]);
 
-	if(num_auxv < 1) return -1;
+	DBG_EXPR({
+		for(int i=0; i<n; i++){
+			DBG("getauxval", "0x%x -> 0x%x\n", pairs[i].a_type, pairs[i].a_un.a_val);
+		}
+	});
 
-	lseek(fd, 0, SEEK_SET);
-
-	g_auxv = calloc(num_auxv, sizeof(e));
-	for(int i=0; i<num_auxv; i++){
-		if(read(fd, &g_auxv[i], sizeof(e)) != sizeof(e)) break;
-	}
-
-	close(fd);
+	g_auxv = malloc(rlen);
+	memcpy(g_auxv, pairs, rlen);
 	return 0;
 }
 
-static void __attribute__((constructor))
+
+static void
+__attribute__((constructor))
 getauxval_init(){
 #ifndef SKIP_GLIBC
 	void *glibc_getauxval = dlsym(RTLD_NEXT, "getauxval");
