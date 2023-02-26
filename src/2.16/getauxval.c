@@ -56,8 +56,8 @@ static int _getauxval_init(){
 
 static void __attribute__((constructor))
 getauxval_init(){
-	void *glibc_getauxval = dlsym(RTLD_NEXT, "getauxval");
 #ifndef SKIP_GLIBC
+	void *glibc_getauxval = dlsym(RTLD_NEXT, "getauxval");
 	if(glibc_getauxval != NULL){
 		getauxval_fn = glibc_getauxval;
 	} else
