@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include "common.h"
 
-bool _glibc_polyfill_debug = false;
+bool _glibc_polyfills_debug = false;
 
 static void
 __attribute__((constructor(101)))
-glibc_polyfill_init(){
-	char *env = getenv("GLIBC_POLYFILL_DEBUG");
-	_glibc_polyfill_debug = (env && *env == '1');
+glibc_polyfills_init(){
+	char *env = getenv("GLIBC_POLYFILLS_DEBUG");
+	_glibc_polyfills_debug = (env && *env == '1');
 }
