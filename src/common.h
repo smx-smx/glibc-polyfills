@@ -9,9 +9,9 @@
 
 extern bool _glibc_polyfills_debug;
 
-#define LOG(fmt, ...) do{ \
-    if(_glibc_polyfills_debug) fprintf(stderr, fmt, ##__VA_ARGS__); \
-} while(0)
+#define LOG(fmt, ...) ({ \
+    if (_glibc_polyfills_debug) fprintf(stderr, fmt, ##__VA_ARGS__); \
+})
 
 #define DBG(module, fmt, ...) LOG("[" module "]: " fmt, ##__VA_ARGS__)
 
